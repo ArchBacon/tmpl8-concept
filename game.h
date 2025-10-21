@@ -23,6 +23,8 @@ public:
 	void KeyDown( int ) { /* implement if you want to handle keys */ }
 	// data members
 	int2 mousePos;
+	Sprite* sprite;
+	float uptime = 0.0f;
 };
 
 } // namespace Tmpl8

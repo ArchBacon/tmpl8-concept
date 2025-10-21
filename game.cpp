@@ -10,12 +10,30 @@
 // -----------------------------------------------------------
 void Game::Init()
 {
-	// anything that happens only once at application start goes here
+	sprite = new Sprite(new Surface("assets/ball.png"), 1);
 }
 
 // -----------------------------------------------------------
 // Main application tick function - Executed once per frame
 // -----------------------------------------------------------
-void Game::Tick( float /* deltaTime */ )
+void Game::Tick(float deltaTime)
 {
+	screen->Clear(0xFFFFFF);
+	uptime += (deltaTime / 1000);
+    
+	// Rotation parameters
+	float radius = 100.0f;  // Distance from center in pixels
+	float speed = 0.5f;     // Rotations per second
+    
+	// Convert time to angle
+	// angle = 2π × speed × time
+	float angle = 2.0f * PI * speed * uptime;
+    
+	// Calculate position on circle
+	// x = radius × cos(angle)
+	// y = radius × sin(angle)
+	float x = radius * cos(angle);
+	float y = radius * sin(angle);
+    
+	sprite->Draw(screen, x + SCRWIDTH / 2, y + SCRHEIGHT / 2);
 }
