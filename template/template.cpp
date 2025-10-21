@@ -30,7 +30,6 @@ GLFWwindow* GetGLFWWindow() { return window; }
 static bool hasFocus = true, running = true;
 static GLTexture* renderTarget = 0;
 static int scrwidth = 0, scrheight = 0;
-static TheApp* app = 0;
 uint keystate[512] = { 0 };
 
 // static member data for instruction set support class
@@ -46,6 +45,38 @@ bool WindowHasFocus() { return hasFocus; }
 bool IsKeyDown( const uint key ) { return keystate[key & 511] == 1; }
 
 // GLFW callbacks
+template<Application App>
+struct AppCallbacks
+{
+	static App* app;
+	
+	static void KeyEventCallback( GLFWwindow*, int key, int, int action, int )
+	{
+		if (key == GLFW_KEY_ESCAPE) running = false;
+		if (action == GLFW_PRESS) { if (app) if (key >= 0) app->KeyDown( key ); keystate[key & 511] = 1; }
+		else if (action == GLFW_RELEASE) { if (app) if (key >= 0) app->KeyUp( key ); keystate[key & 511] = 0; }
+	}
+
+	static void MouseButtonCallback( GLFWwindow*, int button, int action, int )
+	{
+		if (action == GLFW_PRESS) { if (app) app->MouseDown( button ); }
+		else if (action == GLFW_RELEASE) { if (app) app->MouseUp( button ); }
+	}
+	
+	static void MouseScrollCallback( GLFWwindow*, double, double y )
+	{
+		app->MouseWheel( (float)y );
+	}
+	
+	static void MousePosCallback( GLFWwindow*, double x, double y )
+	{
+		if (app) app->MouseMove( (int)x, (int)y );
+	}
+};
+
+template<Application App>
+App* AppCallbacks<App>::app = nullptr;
+
 void InitRenderTarget( int w, int h )
 {
 	// allocate render target and surface
@@ -56,34 +87,18 @@ void ReshapeWindowCallback( GLFWwindow*, int w, int h )
 {
 	glViewport( 0, 0, w, h );
 }
-void KeyEventCallback( GLFWwindow*, int key, int, int action, int )
-{
-	if (key == GLFW_KEY_ESCAPE) running = false;
-	if (action == GLFW_PRESS) { if (app) if (key >= 0) app->KeyDown( key ); keystate[key & 511] = 1; }
-	else if (action == GLFW_RELEASE) { if (app) if (key >= 0) app->KeyUp( key ); keystate[key & 511] = 0; }
-}
+
 void CharEventCallback( GLFWwindow*, uint ) { /* nothing here yet */ }
 void WindowFocusCallback( GLFWwindow*, int focused ) { hasFocus = (focused == GL_TRUE); }
-void MouseButtonCallback( GLFWwindow*, int button, int action, int )
-{
-	if (action == GLFW_PRESS) { if (app) app->MouseDown( button ); }
-	else if (action == GLFW_RELEASE) { if (app) app->MouseUp( button ); }
-}
-void MouseScrollCallback( GLFWwindow*, double, double y )
-{
-	app->MouseWheel( (float)y );
-}
-void MousePosCallback( GLFWwindow*, double x, double y )
-{
-	if (app) app->MouseMove( (int)x, (int)y );
-}
+
 void ErrorCallback( int, const char* description )
 {
 	fprintf( stderr, "GLFW Error: %s\n", description );
 }
 
 // Application entry point
-int main()
+template <Application App>
+int CreateApp()
 {
 	// open a window
 	if (!glfwInit()) FatalError( "glfwInit failed." );
@@ -102,11 +117,11 @@ int main()
 	glfwMakeContextCurrent( window );
 	// register callbacks
 	glfwSetWindowSizeCallback( window, ReshapeWindowCallback );
-	glfwSetKeyCallback( window, KeyEventCallback );
+	glfwSetKeyCallback( window, AppCallbacks<App>::KeyEventCallback );
 	glfwSetWindowFocusCallback( window, WindowFocusCallback );
-	glfwSetMouseButtonCallback( window, MouseButtonCallback );
-	glfwSetScrollCallback( window, MouseScrollCallback );
-	glfwSetCursorPosCallback( window, MousePosCallback );
+	glfwSetMouseButtonCallback( window, AppCallbacks<App>::MouseButtonCallback );
+	glfwSetScrollCallback( window, AppCallbacks<App>::MouseScrollCallback );
+	glfwSetCursorPosCallback( window, AppCallbacks<App>::MousePosCallback );
 	glfwSetCharCallback( window, CharEventCallback );
 	// initialize GLAD
 	if (gladLoadGL() == 0) FatalError( "gladLoadGLLoader failed." );
@@ -137,9 +152,11 @@ int main()
 	// initialize application
 	InitRenderTarget( SCRWIDTH, SCRHEIGHT );
 	Surface* screen = new Surface( SCRWIDTH, SCRHEIGHT );
-	app = new Game();
-	app->screen = screen;
-	app->Init();
+
+	App app;
+	AppCallbacks<App>::app = &app;
+	app.screen = screen;
+	app.Init();
 	// done, enter main loop
 #if 0
 	// crt shader, https://github.com/libretro/slang-shaders/tree/master/crt/shaders/hyllian
@@ -334,11 +351,11 @@ int main()
 	{
 		deltaTime = min( 500.0f, 1000.0f * timer.elapsed() );
 		timer.reset();
-		app->Tick( deltaTime );
+		app.Tick( deltaTime );
 		// send the rendering result to the screen using OpenGL
 		if (frameNr++ > 1)
 		{
-			if (app->screen) renderTarget->CopyFrom( app->screen );
+			if (app.screen) renderTarget->CopyFrom( app.screen );
 			shader->Bind();
 			shader->SetInputTexture( 0, "c", renderTarget );
 			DrawQuad();
@@ -349,11 +366,16 @@ int main()
 		if (!running) break;
 	}
 	// close down
-	app->Shutdown();
+	app.Shutdown();
 	Kernel::KillCL();
 	glfwDestroyWindow( window );
 	glfwTerminate();
 	return 0;
+}
+
+int main()
+{
+	return CreateApp<Game>();
 }
 
 // Jobmanager implementation

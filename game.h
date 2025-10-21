@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include "application.h"
+
 namespace Tmpl8
 {
-
-class Game : public TheApp
+class Game
 {
 public:
 	// game flow methods
@@ -23,8 +24,12 @@ public:
 	void KeyDown( int ) { /* implement if you want to handle keys */ }
 	// data members
 	int2 mousePos;
+	Surface* screen = nullptr;
+	
 	Sprite* sprite;
 	float uptime = 0.0f;
 };
 
+static_assert(Application<Game>, "Game must satisfy the Application concept");
+	
 } // namespace Tmpl8
