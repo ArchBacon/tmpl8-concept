@@ -45,7 +45,7 @@ bool WindowHasFocus() { return hasFocus; }
 bool IsKeyDown( const uint key ) { return keystate[key & 511] == 1; }
 
 // GLFW callbacks
-template<Application App>
+template<ApplicationMinimal App>
 struct AppCallbacks
 {
 	static App* app;
@@ -53,28 +53,37 @@ struct AppCallbacks
 	static void KeyEventCallback( GLFWwindow*, int key, int, int action, int )
 	{
 		if (key == GLFW_KEY_ESCAPE) running = false;
-		if (action == GLFW_PRESS) { if (app) if (key >= 0) app->KeyDown( key ); keystate[key & 511] = 1; }
-		else if (action == GLFW_RELEASE) { if (app) if (key >= 0) app->KeyUp( key ); keystate[key & 511] = 0; }
+		
+		if constexpr (requires {app->KeyDown(0); }) 
+			if (action == GLFW_PRESS) { if (app) if (key >= 0) app->KeyDown( key ); keystate[key & 511] = 1; }
+
+		if constexpr (requires {app->KeyUp(0); }) 
+			if (action == GLFW_RELEASE) { if (app) if (key >= 0) app->KeyUp( key ); keystate[key & 511] = 0; }
 	}
 
 	static void MouseButtonCallback( GLFWwindow*, int button, int action, int )
 	{
-		if (action == GLFW_PRESS) { if (app) app->MouseDown( button ); }
-		else if (action == GLFW_RELEASE) { if (app) app->MouseUp( button ); }
+		if constexpr (requires {app->MouseDown(0); }) 
+			if (action == GLFW_PRESS) { if (app) app->MouseDown( button ); }
+
+		if constexpr (requires {app->MouseUp(0); }) 
+			if (action == GLFW_RELEASE) { if (app) app->MouseUp( button ); }
 	}
 	
 	static void MouseScrollCallback( GLFWwindow*, double, double y )
 	{
-		app->MouseWheel( (float)y );
+		if constexpr (requires {app->MouseWheel(0.0f); })
+			app->MouseWheel( (float)y );
 	}
 	
 	static void MousePosCallback( GLFWwindow*, double x, double y )
 	{
-		if (app) app->MouseMove( (int)x, (int)y );
+		if constexpr (requires {app->MouseMove(0.0f, 0.0f); })
+			if (app) app->MouseMove( (int)x, (int)y );
 	}
 };
 
-template<Application App>
+template<ApplicationMinimal App>
 App* AppCallbacks<App>::app = nullptr;
 
 void InitRenderTarget( int w, int h )
@@ -97,7 +106,7 @@ void ErrorCallback( int, const char* description )
 }
 
 // Application entry point
-template <Application App>
+template <ApplicationMinimal App>
 int CreateApp()
 {
 	// open a window

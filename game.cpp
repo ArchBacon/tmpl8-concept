@@ -26,14 +26,11 @@ void Game::Tick(float deltaTime)
 	float speed = 0.5f;     // Rotations per second
     
 	// Convert time to angle
-	// angle = 2π × speed × time
 	float angle = 2.0f * PI * speed * uptime;
     
 	// Calculate position on circle
-	// x = radius × cos(angle)
-	// y = radius × sin(angle)
 	float x = radius * cos(angle);
 	float y = radius * sin(angle);
     
-	sprite->Draw(screen, x + SCRWIDTH / 2, y + SCRHEIGHT / 2);
+	sprite->Draw(screen, x + mousePos.x, y + mousePos.y);
 }

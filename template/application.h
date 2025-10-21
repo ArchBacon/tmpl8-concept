@@ -23,3 +23,15 @@ concept Application = requires(T app, float deltaTime, int button, int key, int 
     // Screen access
     { app.screen } -> std::convertible_to<Surface*>;
 };
+
+template<typename T>
+concept ApplicationMinimal = requires(T app, float deltaTime, int button, int key, int x, int y, float wheel)
+{
+    // Lifecycle methods
+    { app.Init() } -> std::same_as<void>;
+    { app.Tick(deltaTime) } -> std::same_as<void>;
+    { app.Shutdown() } -> std::same_as<void>;
+	
+    // Screen access
+    { app.screen } -> std::convertible_to<Surface*>;
+};
